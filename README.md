@@ -2,5 +2,5 @@
 
 ```
 pipx install copier
-copier copy gh:kj-9/copier-svelte-kit .
+copier copy --trust gh:kj-9/copier-svelte-kit .
 ```
