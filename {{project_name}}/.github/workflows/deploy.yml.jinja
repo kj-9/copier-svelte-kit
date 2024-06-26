@@ -1,0 +1,87 @@
+# Simple workflow for deploying static content to GitHub Pages
+name: Deploy static content to Pages
+
+on:
+  # Runs on pushes targeting the default branch
+  push:
+    branches: ['main']
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+permissions:
+  contents: read
+{%- if deploy == 'gh-pages'  %}
+  pages: write
+  id-token: write
+{%- else %}
+  deployments: write
+{% endif %}
+jobs:
+  deploy:
+{%- if deploy == 'gh-pages'  %}
+    environment:
+      name: github-pages
+      url: {% raw %}${{ steps.deployment.outputs.page_url }}{% endraw %}
+{%- endif %}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - uses: actions/cache@v4
+        name: Setup pnpm cache
+        with:
+          key: {% raw %}${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-{% endraw %}
+
+      - name: Install dependencies
+        run: |
+          pnpm install
+
+      - name: build
+        run: |
+          pnpm build
+{% if deploy == 'gh-pages'  %}
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # Upload entire repository
+          path: './build'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+{% else %}
+      - name: Publish to Cloudflare Pages
+        uses: cloudflare/pages-action@1
+        with:
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          projectName: ${{ secrets.CLOUDFLARE_PROJECT_NAME }}
+          directory: build
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+          # production branch name for cloudflare pages, not git branch name.
+          # currently, cannot change cfp production branch name if project is created by wrangler cli.
+          branch: main
+{% endif %}

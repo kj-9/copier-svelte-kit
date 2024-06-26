@@ -1,0 +1,30 @@
+project_name: my-svelte-kit
+deploy:
+    type: str
+    help: Which deployment method to use
+    default: gh-pages
+    choices:
+        - gh-pages
+        - cloudflare-pages
+
+_tasks:
+  - | # Create a new SvelteKit project at temp/ and copy it to the project directory saving generated files
+    # skip tasks if NOTASKS is set
+    if [ -n "$NOTASKS" ]; then
+        exit 0
+    fi
+
+    set -e
+    TEMPDIR=temp/
+    mkdir -p $TEMPDIR
+    cd $TEMPDIR
+
+    pnpm create svelte@latest ./
+    pnpm i -D @sveltejs/adapter-static tailwindcss postcss autoprefixer
+    pnpx tailwindcss init -p
+
+    cd ..
+    rsync -av --ignore-existing $TEMPDIR/ {{project_name}}/
+    rm -rf $TEMPDIR
+
+
