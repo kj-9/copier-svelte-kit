@@ -56,10 +56,12 @@ jobs:
         run: |
           pnpm install
 
+{% if deploy == 'gh-pages'  %}
       - name: build
+        env:
+          BASE_PATH: '/${{ github.event.repository.name }}'
         run: |
           pnpm build
-{% if deploy == 'gh-pages'  %}
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
@@ -73,6 +75,9 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
 {% else %}
+      - name: build
+        run: |
+          pnpm build
       - name: Publish to Cloudflare Pages
         uses: cloudflare/pages-action@1
         with:
